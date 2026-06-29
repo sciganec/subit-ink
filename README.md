@@ -158,16 +158,6 @@ bilattice as base algebra.
 
 ---
 
-## Honest Limitations
-
-- All results on Fragment 1 (same scroll, same scan)
-- Three "domains" are depth offsets, not real cross-scroll shift
-- No comparison against TimeSformer or other strong baselines
-- Evidence threshold (0.4) not tuned per fragment
-- Cross-scroll test is the critical next step
-
----
-
 ## Citation
 
 ```bibtex
@@ -182,7 +172,7 @@ bilattice as base algebra.
 
 **References:**
 - Belnap, N. (1977). *A useful four-valued logic*
-- SUBIT-TOPOS Specification v1.0, 2026
+- SUBIT-TOPOS Specification v1.0, 2025
 - Vesuvius Challenge Grand Prize (Nader et al., 2023)
 
 ---
