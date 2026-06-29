@@ -8,159 +8,183 @@
 
 ## Overview
 
-SUBIT-INK replaces the standard binary ink classifier with a **four-valued Belnap bilattice**, enabling the model to express epistemic states beyond a simple yes/no decision.
+SUBIT-INK applies **four-valued Belnap logic** to ink detection in
+Herculaneum papyri. Instead of a single binary classifier, we combine
+multiple independent detectors through a Belnap combiner that produces
+four semantic states:
 
-Instead of predicting one logit (ink / no ink), SUBIT-INK predicts **two independent logits** (yang / yin), yielding four semantic states:
+| State | Meaning | Action |
+|-------|---------|--------|
+| **INK** (T) | Cross-domain agreement: all detectors say ink | Include |
+| **BOTH** (B) | Domain conflict: detectors disagree | Flag for review |
+| **VOID** (F) | Cross-domain agreement: all detectors say no ink | Exclude |
+| **UNKNOWN** (N) | All detectors uncertain | Mark as lacuna |
 
-| State | Code | Meaning | Action |
-|-------|------|---------|--------|
-| **INK** | T (yang=1, yin=0) | Confident ink | Include |
-| **BOTH** | B (yang=1, yin=1) | Ambiguous / letter boundary | Flag for review |
-| **VOID** | F (yang=0, yin=1) | Confident background | Exclude |
-| **UNKNOWN** | N (yang=0, yin=0) | Missing data / damage | Mark as lacuna |
-
-The only architectural change from a standard binary model is replacing the final head:
-
-```python
-# Standard binary head
-self.head = nn.Conv2d(features, 1, kernel_size=1)
-
-# SUBIT dual head — same architecture, new semantics
-self.yang_head = nn.Conv2d(features, 1, kernel_size=1)
-self.yin_head  = nn.Conv2d(features, 1, kernel_size=1)
-```
+The key insight: **BOTH marks exactly where domain shift causes
+hallucinations** — not randomly distributed noise, but structured
+semantic instability at letter boundaries and domain transition zones.
 
 ---
 
-## Results — Fragment 1, 65 layers
+## Results
 
-| Metric | SUBIT-INK | Binary Baseline | Δ |
-|--------|-----------|-----------------|---|
-| F1 (INK class) | **0.7954** | 0.8197 | −0.024 |
-| Precision | **0.7692** | — | |
-| Recall | **0.8234** | — | |
-| Letter boundaries in BOTH | **24.5%** | — | hallucination filter |
+Tested on Fragment 1, all 65 layers, F0.5 metric (Vesuvius standard,
+precision > recall):
 
-**Why SUBIT F1 is slightly lower:** by design, ambiguous pixels are routed to BOTH instead of INK, reducing false positives at the cost of a small F1 drop. The BOTH class acts as a built-in hallucination filter.
+| Method | F0.5 | Δ vs baseline |
+|--------|------|---------------|
+| Mean ensemble (baseline) | 0.9166 | — |
+| Hard Belnap (2 domains) | 0.9317 | +0.015 |
+| Hard Belnap (3 domains) | 0.9302 | +0.014 |
+| **Soft Belnap (3 domains)** | **0.9349** | **+0.018** |
 
-If BOTH pixels are included in INK (relaxed threshold):
+Additional metrics (Soft Belnap):
+- Belnap entropy mean: **0.159 bits**
+- High-entropy pixels (H > 1.5 bit): **0.4%** — uncertainty tightly localized
+- SUBIT-INK Score (Hard 3): **0.4006**
+- SUBIT-INK Score (Soft 3): **0.3546**
 
-```
-F1 (INK + BOTH) > Binary baseline F1
-```
-
----
-
-## Theoretical Foundation
-
-SUBIT-INK is an applied instantiation of **SUBIT-TOPOS** — a formal theory of self-referential dynamical systems with a four-valued Belnap bilattice as its base algebra.
-
-The correspondence between theory and physical scroll properties:
-
-| Ω_SUBIT | SUBIT-INK | Physical meaning |
-|---------|-----------|-----------------|
-| `stable` | INK (T) | Ink signal consistent across all 3D layers |
-| `metastable` | BOTH (B) | Letter boundary, unstable signal |
-| `cyclic` | UNKNOWN (N) | Signal appears/disappears — artifact |
-| `chaotic` | VOID (F) | No systematic signal |
-
-Central thesis: **P is true ⟺ F(P) ⊆ P** — a pixel is ink only if its classification is stable under the model's evolution.
+![SUBIT-BELNAP v2 results](v2_belnap_combiner/subit_belnap_v2.png)
 
 ---
 
 ## Architecture
 
+### v2: Belnap Combiner (current)
+
+Three independent ink detectors, each trained on a different depth
+slice of the 3D surface volume:
+
 ```
-Input: 2D surface scan (aggregated from central layers)
-         ↓
-2D U-Net encoder-decoder (base_ch=32)
-         ↓
-    SUBIT dual head
-    ┌─────────────┐
-    │ yang_head   │ → logit_yang → sigmoid → yang_prob
-    │ yin_head    │ → logit_yin  → sigmoid → yin_prob
-    └─────────────┘
-         ↓
-decode_belnap(yang_prob, yin_prob, threshold=0.5)
-         ↓
-  {INK, BOTH, VOID, UNKNOWN}
+Domain A: central layers  (mid-3 : mid+4)   — core ink signal
+Domain B: upper layers    (shifted -8)       — surface texture
+Domain C: lower layers    (shifted +8)       — subsurface signal
 ```
 
-**Loss function:**
+**Soft Belnap via evidence accumulation:**
 
 ```python
-loss = BCEWithLogitsLoss(pos_weight=pw)(yang_logit, yang_label) +
-       BCEWithLogitsLoss()(yin_logit,  yin_label)
+belief_ink   = min(prob_A, prob_B, prob_C)
+belief_void  = min(1-prob_A, 1-prob_B, 1-prob_C)
+conflict     = cross-evidence between ink and void signals
+uncertainty  = 1 - belief_ink - belief_void - conflict
 ```
 
-**Label generation from binary mask:**
+**Corrected truth table:**
 
 ```python
-yang[ink]    = 1.0; yin[ink]    = 0.0  # INK
-yang[border] = 1.0; yin[border] = 1.0  # BOTH (dilation zone)
-yang[void]   = 0.0; yin[void]   = 1.0  # VOID
-yang[damage] = 0.0; yin[damage] = 0.0  # UNKNOWN
+def belnap_combine(prob_A, prob_B, thr=0.5):
+    A = prob_A > thr
+    B = prob_B > thr
+    uncertain = (prob_A > 0.3) & (prob_A < 0.7) & \
+                (prob_B > 0.3) & (prob_B < 0.7)
+    result = np.ones(prob_A.shape, dtype=np.int32)  # VOID default
+    result[A & B]     = 2  # INK:     both agree positive
+    result[A ^ B]     = 3  # BOTH:    XOR = domain conflict
+    result[uncertain] = 0  # UNKNOWN: all uncertain
+    return result
+```
+
+### v1: Single Model Dual Head (archived)
+
+Original approach: one model with two output heads (yang/yin).
+BOTH was learned from a pre-defined dilation mask, not genuine
+domain disagreement. Archived in `v1_single_model/`.
+
+---
+
+## Why this matters for cross-scroll generalization
+
+The main unsolved problem in Vesuvius Challenge is domain adaptation:
+models trained on Fragment 1 fail on Scrolls 2, 3, 4.
+
+When applied across scrolls:
+
+```
+Model A: trained on Fragment 1  →  prob_A
+Model B: trained on new scroll  →  prob_B
+
+Belnap(prob_A, prob_B):
+  agreement  →  INK   (stable across domains)
+  conflict   →  BOTH  (domain shift artifact → review, not INK)
 ```
 
 ---
 
-## Usage
+## Belnap Entropy
 
-```bash
-pip install torch tifffile pillow scipy scikit-learn matplotlib
+```
+H_B = -Σ p(s) log₂ p(s)   for s ∈ {INK, BOTH, VOID, UNKNOWN}
 ```
 
-```python
-from subit_core import make_belnap_labels, decode_belnap, BelnapState
-
-# Convert binary annotations to Belnap labels
-yang_labels, yin_labels = make_belnap_labels(ink_mask, dilation_radius=4)
-
-# Train model with BelnapLoss
-# (see subit_kaggle_final.py for full training loop)
-
-# Inference
-belnap_map = decode_belnap(yang_prob, yin_prob, threshold=0.5)
-
-# Use results
-confident_ink  = (belnap_map == BelnapState.INK)   # include
-review_needed  = (belnap_map == BelnapState.BOTH)  # flag for annotator
-data_gap       = (belnap_map == BelnapState.UNKNOWN) # lacuna
-```
+Uses: prioritize human annotation, guide active learning,
+flag regions for higher-resolution rescanning.
 
 ---
 
-## Files
+## SUBIT-INK Score
 
-| File | Description |
-|------|-------------|
-| `subit_core.py` | Core logic: Belnap bilattice, loss, metrics |
-| `subit_model.py` | 3D U-Net with SUBIT dual head |
-| `subit_kaggle_final.py` | Complete training pipeline for Kaggle |
-| `subit_run.py` | Standalone runner for local execution |
+```
+SUBIT-INK = Precision(INK) × ConflictLocalization(BOTH)
+```
+
+If BOTH randomly distributed → low score → bad combiner.
+If BOTH traces letter boundaries → high score → good combiner.
+
+---
+
+## Theoretical Foundation
+
+SUBIT-INK is grounded in **SUBIT-TOPOS** — a formal theory of
+self-referential dynamical systems with a four-valued Belnap
+bilattice as base algebra.
+
+| Ω_SUBIT | SUBIT-INK | Physical meaning |
+|---------|-----------|-----------------|
+| `stable` | INK (T) | Consistent signal across all domains |
+| `metastable` | BOTH (B) | Letter boundary, domain conflict |
+| `cyclic` | UNKNOWN (N) | Signal appears/disappears — artifact |
+| `chaotic` | VOID (F) | No systematic signal |
+
+---
+
+## Quickstart (Kaggle)
+
+1. [kaggle.com/code](https://kaggle.com/code) → New Notebook
+2. Add Data: `vesuvius-challenge-ink-detection`
+3. Settings → Accelerator → GPU T4 x2
+4. Copy cells from `v2_belnap_combiner/subit_belnap_v2.py`
+5. Run All (~45 min)
+
+---
+
+## Honest Limitations
+
+- All results on Fragment 1 (same scroll, same scan)
+- Three "domains" are depth offsets, not real cross-scroll shift
+- No comparison against TimeSformer or other strong baselines
+- Evidence threshold (0.4) not tuned per fragment
+- Cross-scroll test is the critical next step
 
 ---
 
 ## Citation
 
-If you use SUBIT-INK in your work:
-
 ```bibtex
 @misc{subit_ink_2026,
-  title  = {SUBIT-INK: Four-Valued Belnap Logic for Ink Detection
-             in Herculaneum Papyri},
-  year   = {2026},
-  note   = {Vesuvius Challenge Progress Prize Submission},
-  url    = {https://github.com/your-org/subit-ink}
+  title = {SUBIT-INK: Four-Valued Belnap Logic for
+           Cross-Domain Ink Detection in Herculaneum Papyri},
+  year  = {2026},
+  note  = {Vesuvius Challenge Progress Prize Submission v2},
+  url   = {https://github.com/sciganec/subit-ink}
 }
 ```
 
-**Theoretical basis:**
+**References:**
 - Belnap, N. (1977). *A useful four-valued logic*
-- SUBIT-TOPOS Specification v1.0, 2025
+- SUBIT-TOPOS Specification v1.0, 2026
+- Vesuvius Challenge Grand Prize (Nader et al., 2023)
 
 ---
 
-## License
-
-MIT — fully open source, compliant with Vesuvius Challenge requirements.
+MIT License — open source, compliant with Vesuvius Challenge requirements.
