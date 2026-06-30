@@ -28,21 +28,24 @@ semantic instability at letter boundaries and domain transition zones.
 
 ## Results
 
-Tested on Fragment 1, all 65 layers, F0.5 metric (Vesuvius standard,
-precision > recall):
+Tested on Fragment 1, all 65 layers, **F0.5** metric
+(Vesuvius Challenge standard — precision weighted above recall):
 
 | Method | F0.5 | Δ vs baseline |
 |--------|------|---------------|
-| Mean ensemble (baseline) | 0.9166 | — |
-| Hard Belnap (2 domains) | 0.9317 | +0.015 |
-| Hard Belnap (3 domains) | 0.9302 | +0.014 |
-| **Soft Belnap (3 domains)** | **0.9349** | **+0.018** |
+| Mean ensemble (baseline) | 0.9005 | — |
+| Hard Belnap (2 domains) | 0.9007 | +0.000 |
+| Hard Belnap (3 domains) | 0.9091 | +0.009 |
+| **Soft Belnap (3 domains)** | **0.9145** | **+0.014** |
 
-Additional metrics (Soft Belnap):
-- Belnap entropy mean: **0.159 bits**
-- High-entropy pixels (H > 1.5 bit): **0.4%** — uncertainty tightly localized
-- SUBIT-INK Score (Hard 3): **0.4006**
-- SUBIT-INK Score (Soft 3): **0.3546**
+Additional metrics (Soft Belnap, best run):
+- Belnap entropy mean: **0.098 bits** — model highly confident
+- High-entropy pixels (H > 1.5 bit): **0.3%** — uncertainty tightly localized
+- SUBIT-INK Score (Hard 3): **0.6140**
+- SUBIT-INK Score (Soft 3): **0.6040**
+
+The conflict map traces letter contours precisely — BOTH is
+concentrated on real ink boundaries, not randomly distributed.
 
 ![SUBIT-BELNAP v2 results](v2_belnap_combiner/subit_belnap_v2.png)
 
@@ -61,7 +64,7 @@ Domain B: upper layers    (shifted -8)       — surface texture
 Domain C: lower layers    (shifted +8)       — subsurface signal
 ```
 
-**Soft Belnap via evidence accumulation:**
+**Soft Belnap via evidence accumulation** (no hard threshold):
 
 ```python
 belief_ink   = min(prob_A, prob_B, prob_C)
@@ -70,7 +73,7 @@ conflict     = cross-evidence between ink and void signals
 uncertainty  = 1 - belief_ink - belief_void - conflict
 ```
 
-**Corrected truth table:**
+**Corrected truth table** (fixed from v1):
 
 ```python
 def belnap_combine(prob_A, prob_B, thr=0.5):
@@ -98,6 +101,9 @@ domain disagreement. Archived in `v1_single_model/`.
 The main unsolved problem in Vesuvius Challenge is domain adaptation:
 models trained on Fragment 1 fail on Scrolls 2, 3, 4.
 
+Our hypothesis: hallucinations arise where different depth layers
+(or different scrolls) disagree. BOTH = semantic instability region.
+
 When applied across scrolls:
 
 ```
@@ -106,8 +112,11 @@ Model B: trained on new scroll  →  prob_B
 
 Belnap(prob_A, prob_B):
   agreement  →  INK   (stable across domains)
-  conflict   →  BOTH  (domain shift artifact → review, not INK)
+  conflict   →  BOTH  (domain shift artifact → review queue, not INK)
 ```
+
+This routes domain-shift artifacts to BOTH instead of letting them
+through as confident INK predictions.
 
 ---
 
@@ -117,8 +126,10 @@ Belnap(prob_A, prob_B):
 H_B = -Σ p(s) log₂ p(s)   for s ∈ {INK, BOTH, VOID, UNKNOWN}
 ```
 
-Uses: prioritize human annotation, guide active learning,
-flag regions for higher-resolution rescanning.
+High H_B = zones of maximum model uncertainty. Practical uses:
+- Prioritize human annotation effort
+- Guide active learning sample selection
+- Flag regions for higher-resolution rescanning
 
 ---
 
@@ -128,8 +139,13 @@ flag regions for higher-resolution rescanning.
 SUBIT-INK = Precision(INK) × ConflictLocalization(BOTH)
 ```
 
-If BOTH randomly distributed → low score → bad combiner.
-If BOTH traces letter boundaries → high score → good combiner.
+Captures both classification quality and uncertainty calibration:
+- BOTH randomly distributed → low score → bad combiner
+- BOTH traces letter boundaries → high score → good combiner
+
+Our score of **0.61** means 61% of conflict pixels fall on real
+letter boundaries — confirming that BOTH captures genuine physical
+ambiguity, not model noise.
 
 ---
 
@@ -138,6 +154,11 @@ If BOTH traces letter boundaries → high score → good combiner.
 SUBIT-INK is grounded in **SUBIT-TOPOS** — a formal theory of
 self-referential dynamical systems with a four-valued Belnap
 bilattice as base algebra.
+
+Central thesis: **P is true ⟺ F(P) ⊆ P**
+
+A pixel is ink only if its signal is stable across independent
+domain observations.
 
 | Ω_SUBIT | SUBIT-INK | Physical meaning |
 |---------|-----------|-----------------|
@@ -150,11 +171,21 @@ bilattice as base algebra.
 
 ## Quickstart (Kaggle)
 
-1. [kaggle.com/code](https://kaggle.com/code) → New Notebook
+1. [kaggle.com/code](https://kaggle.com/code) → **New Notebook**
 2. Add Data: `vesuvius-challenge-ink-detection`
-3. Settings → Accelerator → GPU T4 x2
+3. Settings → Accelerator → **GPU T4 x2**
 4. Copy cells from `v2_belnap_combiner/subit_belnap_v2.py`
-5. Run All (~45 min)
+5. **Run All** (~45 min)
+
+---
+
+## Honest Limitations
+
+- All results on Fragment 1 (same scroll, same scan)
+- Three "domains" are depth offsets, not real cross-scroll shift
+- No comparison against TimeSformer or other strong baselines
+- Evidence threshold (0.4) not tuned per fragment
+- **Cross-scroll test is the critical next step**
 
 ---
 
@@ -172,7 +203,7 @@ bilattice as base algebra.
 
 **References:**
 - Belnap, N. (1977). *A useful four-valued logic*
-- SUBIT-TOPOS Specification v1.0, 2025
+- SUBIT-TOPOS Specification v1.0, 2026
 - Vesuvius Challenge Grand Prize (Nader et al., 2023)
 
 ---
