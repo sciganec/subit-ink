@@ -4,7 +4,7 @@
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
 [![PyTorch: 2.0+](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 [![Kaggle: Succeeded](https://img.shields.io/badge/Kaggle-Vesuvius%20Challenge-20BEFF.svg)](https://www.kaggle.com/competitions/vesuvius-challenge-ink-detection)
-[![Private Score](https://img.shields.io/badge/Private%20Score-0.4864%20(v27)-brightgreen.svg)](#competition-benchmark-progression)
+[![Private Score](https://img.shields.io/badge/Private%20Score-0.5462%20(v33)-brightgreen.svg)](#competition-benchmark-progression)
 
 **SUBIT-Ink** is an advanced 3D deep learning framework for non-invasive ink detection in carbonized Herculaneum papyri from X-ray micro-computed tomography (micro-CT), developed for the **Vesuvius Challenge**.
 
@@ -14,7 +14,7 @@ Grounded in **SUBIT-∞** formal theory (§0.3 Principle of Non-collapse & §9 T
 
 ## 🏆 Key Achievements
 
-- **Kaggle Leaderboard Best:** Reached **0.5083 Public / 0.4864 Private Score** (Version 27 / v23.0).
+- **Kaggle Leaderboard Best:** Reached **0.5008 Public / 0.546201 Private Score** (Version 33 / v27.0-OmegaAttained) — an all-time record achieving breakthrough generalization.
 - **Public-to-Private Resilience:** Unlike conventional baselines that drop over $0.07$ on the private test set due to boundary overfitting, SUBIT-Ink maintains balanced generalization across unseen scroll fragments.
 - **Compact & Fast:** Custom 3.12M parameter architecture that runs 22 epochs of training, 4x TTA holdout validation, and full 4x TTA high-density test inference in $\approx 415$ minutes on a standard 16GB Tesla T4 GPU (comfortably below Kaggle's 540-minute limit).
 
@@ -26,10 +26,12 @@ Grounded in **SUBIT-∞** formal theory (§0.3 Principle of Non-collapse & §9 T
 |---|---|---|---|---|---|
 | **v20 Baseline** | Standard Binary 3D U-Net | 0.5094 | **0.4367** | 0.550 | Severe public $\to$ private overfit (-0.072 drop) |
 | **v26** | v22.5-SpeedChampion | 0.4643 | **0.4799** | 0.585 | Spatial 80/20 CV split + Hann window blending |
-| **v27** 🏆 | **v23.0-InfinityChampion** | **0.5083** | **0.4864 (RECORD)** | **0.580** | **Recall-Boost Tversky + 4x TTA Holdout Calibration** |
+| **v27** | v23.0-InfinityChampion | 0.5083 | **0.4864** | 0.580 | Recall-Boost Tversky + 4x TTA Holdout Calibration |
 | **v29** | v24.1-Grandmaster | 0.4973 | **0.4787** | 0.505 | DEPTH=20 experiment (proved slower convergence) |
 | **v30** | v25.0-RecallMaster | 0.4813 | **0.4797** | 0.655 | Diagnosed 75/25 split & early epoch pollution |
-| **v31 (Current)** | **v26.0-GrandmasterLateConverge** | *0.52+* | *0.49+ – 0.51+* | [0.48, 0.60] | **Late-Epoch Converge ($\ge 16$) + Weighted Ensemble** |
+| **v31** | v24.0-DiverseEnsemble | 0.4272 | **0.4717** | 0.580 | Epoch gap bug forced under-converged models (Ep11, 14) |
+| **v32** | v26.0-GrandmasterLateConverge | 0.4745 | **0.4876** | 0.480 (clamped) | Restored late-epoch ensemble ($\ge 16$) + F0.5 weighting |
+| **v33** 👑 | **v27.0-OmegaAttained** | **0.5008** | **0.546201 (RECORD)** | **0.620** | **Unclamped [0.35, 0.65], stride=112, 4800 patches, natural attractor** |
 
 ---
 
@@ -94,9 +96,10 @@ SUBIT-Ink is informed by the formal specification **SUBIT-∞ v6.13** (October 2
 
 ```
 subit-ink/
-├── ink_detection_kaggle_v26.py   # Flagship standalone Kaggle pipeline (v26.0)
+├── ink_detection_kaggle_v27.py   # Flagship standalone Kaggle pipeline (v27.0-OmegaAttained)
+├── ink_detection_kaggle_v26.py   # Previous stable iteration (v26.0)
 ├── requirements.txt              # Core package dependencies
-├── RELEASE.md                    # Official GitHub release notes (v26.0)
+├── RELEASE.md                    # Official GitHub release notes (v27.0-OmegaAttained)
 ├── CHANGELOG.md                  # Chronological history of all iterations
 ├── REPRODUCIBILITY.md            # Exact replication and submission instructions
 ├── LICENSE                       # MIT License

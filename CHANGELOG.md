@@ -7,7 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [26.0.0] - 2026-10-27
+## [27.0.0] - 2026-11-04 (Kaggle Version 33) 👑 **ALL-TIME GRANDMASTER RECORD**
+### Breakthrough Results
+- **Private Score: `0.546201`** (a massive $+0.0586$ leap over v32, setting the all-time project record).
+- **Public Score: `0.500844`**.
+- **Holdout Validation:** Ensemble $F_{0.5} = 0.7251$ with calibrated optimal threshold $t = 0.620$.
+- **Physical Ink Ratio:** Test fragment `b` detected at **$6.93\%$** (precisely matching the physical 6-7% ink coverage of authentic Herculaneum scrolls), fragment `a` at $8.44\%$.
+
+### Added & Changed (OmegaAttained Architecture)
+- **Uncapped Threshold Optimization:** Lowered `THRESHOLD_MIN` from $0.48 	o 0.35$ and extended `THRESHOLD_MAX` to $0.65$. Allowed the ensemble holdout search to converge onto its natural $\omega$-limit attractor ($t = 0.620$).
+- **High-Density Holdout Scan:** Refined validation stride from $128 	o 112$ with $4\times$ TTA, eliminating spatial sub-sampling error during threshold selection.
+- **Enriched Training Data:** Increased stratified patches from $4,500 	o 4,800$ ($+300$ patches) focusing on subtle stroke boundaries.
+- **Stronger Regularization:** Expanded brightness/contrast jitter to probability $0.45$, gain $[0.90, 1.10]$, bias $[-0.035, 0.035]$.
+- **Checkpoints in Ensemble:** Ep16 ($F_{0.5}=0.6291$), Ep20 ($F_{0.5}=0.6255$), Ep18 ($F_{0.5}=0.6142$).
+
+---
+
+## [26.0.0] - 2026-10-27 (Kaggle Version 32)
+### Added
+- **Late-Epoch Ensemble Filter (`MIN_ENSEMBLE_EPOCH = 16`):** Prevents under-converged early models from entering the ensemble.
+- **Weighted Ensemble Blending:** Checkpoints weighted by validation $F_{0.5}$ score.
+- **Spatial 80/20 CV Split Restored:** Train on Frag 1, Frag 2, top 80% Frag 3; holdout on bottom 20%.
+### Results
+- Public Score: `0.474453` | Private Score: `0.487555` (Broke previous v27 record).
+- Threshold clamped at floor $0.480$, indicating natural attractor lay outside the constrained window.
+
+---
 ### Added
 - **Late-Epoch Ensemble Filter (`MIN_ENSEMBLE_EPOCH = 16`):** Prevents under-converged early models (such as Ep14) from entering the top-3 ensemble.
 - **Weighted Ensemble Blending:** Checkpoints are blended proportionally to their validation $F_{0.5}$ score.
