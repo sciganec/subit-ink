@@ -177,7 +177,9 @@ Validation holdout patches are evaluated exclusively using full-resolution 4x Te
 | **v23.0 (v27)** 🏆 | **Tversky($\alpha=0.4, \beta=0.6$), 4x TTA Val** | **0.5083** | **0.4864 (RECORD)** | **-0.0219 (robust)** | **423.4 min** | **Success** |
 | **v24.1 (v29)** | $D=20$ experiment, diverse ensemble | 0.4973 | **0.4787** | -0.0186 (slow convergence) | 492.0 min | Success |
 | **v25.0 (v30)** | 75/25 split experiment | 0.4813 | **0.4797** | -0.0016 (data loss) | 413.9 min | Success |
-| **v26.0 (v31)** | Late-Epoch Filter ($\ge 16$), Weighted Ens | *0.52+* | *0.49+ – 0.51+* | *target range* | ~418 min | Ready |
+| **v26.0 (v32)** | Late-Epoch Filter ($\ge 16$), $F_{0.5}$-Weighting | 0.4745 | **0.4876** | +0.0131 (broke v27 record) | 381.1 min | Success |
+| **v27.0 (v33)** 🏆 | **OmegaAttained: Unclamped [0.35,0.65], Stride 112** | **0.5008** | **0.546201 (PRIVATE RECORD)** | **+0.0454 (Private >> Public)** | **434.0 min** | **Grandmaster Record** |
+| **v28.0 (v34)** 🌟 | **WarpInfinity: WarpedDepth + Belnap Edge** | **0.512781 (PUBLIC RECORD)** | **0.544153** | **+0.0314 (Private >> Public)** | **445.3 min** | **Public Record** |
 
 ### 4.3. Failure Diagnostics of Iterations v29 & v30
 Comparative analysis of training trajectories revealed critical failure mechanisms:

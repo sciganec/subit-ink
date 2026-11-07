@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [28.0.0] - 2026-11-06 (Kaggle Version 34) 🌟 **PUBLIC LEADERBOARD RECORD**
+### Breakthrough Results
+- **Public Score: `0.512781`** (All-time project record on the Kaggle Public Leaderboard).
+- **Private Score: `0.544153`** (Second consecutive run above $0.544$, proving generalization stability).
+- **Generalization Gap:** $+0.031372$ (Private > Public).
+- **Calibrated Threshold:** $t = 0.590$ (Ensemble holdout $F_{0.5} = 0.6924$).
+- **Ink Density:** Fragment `b` at $7.12\%$, Fragment `a` at $9.89\%$.
+- **Runtime:** $445.3$ minutes (safely within 540 min limit).
+
+### Added
+- **`WarpedDepthCollapse` (SUBIT-WARP W0–W24):** Incorporates learnable geometric curvature prior $W(z) = \text{bias} - |\alpha| z^2$ along $Z$-depth, focusing attention on the physical papyrus sheet and suppressing inter-sheet CT artifacts.
+- **Belnap $B$-State Boundary Regularizer (`boundary_gradient_loss`):** Finite difference spatial gradient penalty ($w=0.05$) sharpening character stroke contours.
+- **Extended Threshold Window:** $[0.40, 0.72]$ preventing artificial truncation.
+- **Training Patches:** Increased to $5,000$ stratified samples.
+
+---
+
 ## [27.0.0] - 2026-11-04 (Kaggle Version 33) 👑 **ALL-TIME GRANDMASTER RECORD**
 ### Breakthrough Results
 - **Private Score: `0.546201`** (a massive $+0.0586$ leap over v32, setting the all-time project record).
