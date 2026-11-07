@@ -1,7 +1,5 @@
 # Warped Depth Attention and Belnap-Inspired Boundary Regularization for Non-Invasive Ink Detection in Herculaneum Papyri (SUBIT-Ink v28)
 
-Nov 6, 2026 · @Slavick
-
 ## Abstract
 
 Carbon ink on carbonized Herculaneum papyrus is nearly invisible to X-ray micro-computed tomography, because ink and substrate differ in attenuation by almost nothing (Δμ ≈ 0). Supervised segmentation models trained on one fragment therefore degrade on unseen fragments, and the gap between public and private leaderboard scores is as informative as the scores themselves. This paper documents SUBIT-Ink v28 ("WarpInfinity"), a compact hybrid 3D/2D network for the Vesuvius Challenge ink-detection task.
